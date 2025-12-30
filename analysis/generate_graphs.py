@@ -1,6 +1,6 @@
 
-No ego. No marketing.  
-**Scientist tone.**
+# No ego. No marketing.  
+# **Scientist tone.**
 
 ---
 
