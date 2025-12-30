@@ -1,0 +1,42 @@
+# Clone the public repo (no authentication required)
+!git clone https://github.com/nayan9572/Real-Time-Knock-Boundary-Identification-Using-a-Theta-Domain-Reduced-Physics-Model.git
+
+# Enter repo
+%cd Real-Time-Knock-Boundary-Identification-Using-a-Theta-Domain-Reduced-Physics-Model
+
+# Install dependencies
+!pip install -r requirements.txt
+
+!python analysis/generate_graphs.py
+
+
+!python analysis/generate_tables.py
+
+
+from PIL import Image
+import matplotlib.pyplot as plt
+import os
+
+graph_dir = "outputs/graphs"
+
+for img_file in os.listdir(graph_dir):
+    print(img_file)
+    img = Image.open(os.path.join(graph_dir, img_file))
+    plt.imshow(img)
+    plt.axis("off")
+    plt.show()
+
+
+from IPython.display import Markdown, display
+import os
+
+# Check if the directory and file exist
+file_path = "outputs/tables/final_boundary_assessment.md"
+
+if os.path.exists(file_path):
+    display(Markdown("## 📊 Warning & Boundary Test Output"))
+    display(Markdown(open(file_path).read()))
+else:
+    display(Markdown(f"**Error:** File not found at `{file_path}`"))
+    display(Markdown(f"Contents of `outputs/tables/`: {os.listdir('outputs/tables/')}"))
+
