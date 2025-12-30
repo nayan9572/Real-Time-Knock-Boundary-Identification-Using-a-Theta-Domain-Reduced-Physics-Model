@@ -6,7 +6,7 @@
 
 # 📈 `analysis/generate_graphs.py` (REAL GRAPH CODE)
 
-```python
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
