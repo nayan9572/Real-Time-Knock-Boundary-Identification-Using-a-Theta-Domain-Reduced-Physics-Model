@@ -6,7 +6,7 @@ os.makedirs("outputs/tables", exist_ok=True)
 # ===============================
 # Load CSV data
 # ===============================
-df_knock = pd.read_csv("data/B_level_full_knock_sweep.csv")
+df_knock = pd.read_csv("B_level_full_knock_sweep.csv")
 
 # ===============================
 # Basic counts
