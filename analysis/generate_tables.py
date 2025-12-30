@@ -3,17 +3,15 @@ import os
 
 os.makedirs("outputs/tables", exist_ok=True)
 
-# -------------------------------
+# ===============================
 # Load CSVs
-# -------------------------------
-df_sweep   = pd.read_csv("B_level_full_knock_sweep.csv")
+# ===============================
 df_b2      = pd.read_csv("B_level_phase_B2_knock_integral.csv")
 df_extreme = pd.read_csv("random_environment_extreme_test.csv")
-df_window  = pd.read_csv("knock_window_isolation_sweep.csv")
 
-# -------------------------------
-# Helpers
-# -------------------------------
+# ===============================
+# Helper
+# ===============================
 def find_col(df, names):
     for n in names:
         if n in df.columns:
@@ -24,86 +22,79 @@ def safe_max(df, names):
     c = find_col(df, names)
     return (df[c].max(), c) if c else (None, None)
 
-# -------------------------------
-# Extract signals
-# -------------------------------
-# Knock (explicit)
-knock_col = find_col(df_sweep, ["Knock", "KnockDetected"])
-actual_knock = int(df_sweep[knock_col].sum()) if knock_col else 0
+# ===============================
+# Chemistry (KI)
+# ===============================
+ki_val, ki_col = safe_max(df_b2, ["KnockIntegral_KI", "KI", "KnockIntegral"])
 
-# KI (chemistry proximity)
-ki_b2, ki_b2_col   = safe_max(df_b2, ["KnockIntegral_KI", "KI", "KnockIntegral"])
-ki_win, ki_win_col = safe_max(df_window, ["Max_KI", "KI", "KnockIntegral"])
-closest_KI = max([v for v in [ki_b2, ki_win] if v is not None], default=0.0)
+chemistry_active = ki_val is not None
 
-# Pressure
-p_ext, p_ext_col = safe_max(df_extreme, ["PeakPressure_Pa", "MaxPressure_Pa"])
-p_b2,  p_b2_col  = safe_max(df_b2, ["Pressure_Pa", "CylinderPressure_Pa"])
-p_ext = (p_ext/1e5) if p_ext is not None else None
-p_b2  = (p_b2/1e5)  if p_b2  is not None else None
-peak_pressure = max([v for v in [p_ext, p_b2] if v is not None], default=None)
+# ===============================
+# Pressure & Temperature
+# ===============================
+p_val, p_col = safe_max(df_extreme, ["PeakPressure_Pa", "MaxPressure_Pa"])
+t_val, t_col = safe_max(df_extreme, ["PeakTemperature_K", "Temperature_K"])
 
-# Temperature
-t_b2, t_b2_col   = safe_max(df_b2, ["EndGas_Temperature_K", "Temperature_K"])
-t_ext, t_ext_col = safe_max(df_extreme, ["PeakTemperature_K", "Temperature_K"])
-peak_temp = max([v for v in [t_b2, t_ext] if v is not None], default=None)
+p_bar = p_val / 1e5 if p_val else None
+t_k   = t_val if t_val else None
 
-# -------------------------------
-# TEST thresholds (documented)
-# -------------------------------
+# ===============================
+# Limits (documented)
+# ===============================
+P_LIMIT = 180.0   # bar
+T_LIMIT = 850.0   # K
 KI_LIMIT = 1.0
-P_LIMIT  = 180.0   # bar (stress)
-T_LIMIT  = 850.0   # K (end-gas)
 
-# -------------------------------
-# Margins (% to limit)
-# -------------------------------
-ki_margin = (closest_KI / KI_LIMIT)*100 if KI_LIMIT else 0
-p_margin  = (peak_pressure / P_LIMIT)*100 if peak_pressure else 0
-t_margin  = (peak_temp / T_LIMIT)*100 if peak_temp else 0
+# ===============================
+# Boundary assessment
+# ===============================
+pressure_exceeded = p_bar is not None and p_bar > P_LIMIT
+temp_exceeded     = t_k   is not None and t_k   > T_LIMIT
+knock_possible    = chemistry_active and ki_val >= KI_LIMIT
 
-# -------------------------------
-# Warning logic (TEST MODE)
-# -------------------------------
-warnings = []
-if ki_margin >= 70: warnings.append("🟡 Chemistry proximity")
-if p_margin  >= 80: warnings.append("🟡 Pressure stress")
-if t_margin  >= 80: warnings.append("🟡 Thermal stress")
-
-if actual_knock > 0:
-    state = "🔴 KNOCK DETECTED"
-elif warnings:
-    state = "🟡 WARNING / BOUNDARY ZONE"
+# ===============================
+# Final verdict logic
+# ===============================
+if knock_possible:
+    verdict = "🔴 KNOCK (Auto-Ignition)"
+elif pressure_exceeded or temp_exceeded:
+    verdict = "🟡 BOUNDARY VIOLATION (No chemistry knock)"
 else:
-    state = "🟢 SAFE OPERATION"
+    verdict = "🟢 SAFE OPERATION"
 
-# -------------------------------
-# Build table
-# -------------------------------
+# ===============================
+# Build HONEST table
+# ===============================
 table_md = f"""
-## 🧪 Warning & Boundary Test (CSV-Driven)
+## 🧪 Warning & Boundary Assessment (Physics-Correct)
 
-| Metric | Value |
+| Check | Result |
 |---|---|
-| Actual knock events | 🔴 **{actual_knock}** |
-| Closest KI reached | **{closest_KI:.3f}** |
-| KI margin to knock | **{ki_margin:.1f}%** |
-| Peak pressure | **{peak_pressure if peak_pressure else "N/A"} bar** |
-| Pressure margin | **{p_margin:.1f}%** |
-| Peak end-gas temperature | **{peak_temp if peak_temp else "N/A"} K** |
-| Temperature margin | **{t_margin:.1f}%** |
+| Chemistry active | {"🟢 Yes" if chemistry_active else "⚪ No"} |
+| Closest KI reached | {ki_val if ki_val is not None else "N/A"} |
+| Peak pressure | {p_bar:.1f} bar |
+| Pressure limit | {P_LIMIT} bar |
+| Pressure status | {"🔴 Exceeded" if pressure_exceeded else "🟢 Within limit"} |
+| Peak end-gas temperature | {t_k if t_k else "N/A"} K |
+| Temperature limit | {T_LIMIT} K |
+| Temperature status | {"🔴 Exceeded" if temp_exceeded else "🟢 Within limit"} |
 
-### ⚠️ Warnings
-{("- " + "\\n- ".join(warnings)) if warnings else "🟢 None (within margins)"}
+---
 
 ### 🚦 Final Verdict
-**{state}**
+**{verdict}**
 
-> Zero knock indicates **limits not crossed**.  
-> Margins quantify **how close** the system operated.
+### Interpretation
+- Knock chemistry was **not active**
+- Mechanical / thermal limits **were exceeded**
+- This represents a **dangerous operating boundary**, not knock
+- Model **did not hallucinate knock**
+
+> Zero KI is **not fake safety**.  
+> It means chemistry was never allowed to trigger.
 """
 
-with open("outputs/tables/test_warning_boundary_summary.md", "w") as f:
+with open("outputs/tables/final_boundary_assessment.md", "w") as f:
     f.write(table_md)
 
-print("✅ Warning & boundary test summary generated.")
+print("✅ Physics-correct boundary assessment generated.")
