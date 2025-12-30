@@ -14,9 +14,9 @@ import os
 os.makedirs("outputs/graphs", exist_ok=True)
 
 # ---------- Load CSVs ----------
-knock = pd.read_csv("data/B_level_full_knock_sweep.csv")
-b2 = pd.read_csv("data/B_level_phase_B2_knock_integral.csv")
-extreme = pd.read_csv("data/random_environment_extreme_test.csv")
+knock = pd.read_csv("B_level_full_knock_sweep.csv")
+b2 = pd.read_csv("B_level_phase_B2_knock_integral.csv")
+extreme = pd.read_csv("random_environment_extreme_test.csv")
 
 # ---------- Graph 1: KI vs RPM ----------
 plt.figure()
