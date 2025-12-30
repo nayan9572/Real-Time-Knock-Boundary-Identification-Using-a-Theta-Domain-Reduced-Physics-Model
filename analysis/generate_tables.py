@@ -6,10 +6,10 @@ os.makedirs("outputs/tables", exist_ok=True)
 # -------------------------------
 # Load CSVs
 # -------------------------------
-df_sweep   = pd.read_csv("data/B_level_full_knock_sweep.csv")
-df_b2      = pd.read_csv("data/B_level_phase_B2_knock_integral.csv")
-df_extreme = pd.read_csv("data/random_environment_extreme_test.csv")
-df_window  = pd.read_csv("data/knock_window_isolation_sweep.csv")
+df_sweep   = pd.read_csv("B_level_full_knock_sweep.csv")
+df_b2      = pd.read_csv("B_level_phase_B2_knock_integral.csv")
+df_extreme = pd.read_csv("random_environment_extreme_test.csv")
+df_window  = pd.read_csv("knock_window_isolation_sweep.csv")
 
 # -------------------------------
 # Helpers
